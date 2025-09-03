@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerenciamento de Produtos</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gerenciamento de Produtos</h1>
+        
+        <form id="produtoForm">
+            <input type="hidden" id="produtoId">
+            <div class="form-group">
+                <label>Nome:</label>
+                <input type="text" id="nome" required>
+            </div>
+            <div class="form-group">
+                <label>Descrição:</label>
+                <input type="text" id="descricao" required>
+            </div>
+            <div class="form-group">
+                <label>Preço:</label>
+                <input type="number" id="preco" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>Estoque:</label>
+                <input type="number" id="estoque" required>
+            </div>
+            <button type="submit">Salvar</button>
+            <button type="button" onclick="clearForm()">Cancelar</button>
+        </form>
+
+        <table id="produtosTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Descrição</th>
+                    <th>Preço</th>
+                    <th>Estoque</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8081/api/produtos';
+        
+        async function loadProdutos() {
+            const response = await fetch(API_URL);
+            const produtos = await response.json();
+            const tbody = document.querySelector('#produtosTable tbody');
+            tbody.innerHTML = '';
+            
+            produtos.forEach(produto => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${produto.id}</td>
+                    <td>${produto.nome}</td>
+                    <td>${produto.descricao}</td>
+                    <td>R$ ${produto.preco}</td>
+                    <td>${produto.quantidadeEstoque}</td>
+                    <td>
+                        <button onclick="editProduto(${produto.id})">Editar</button><br><br/>
+                        <button onclick="deleteProduto(${produto.id})">Excluir</button>
+                    </td>
+                `;
+            });
+        }
+        
+        document.getElementById('produtoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const produto = {
+                nome: document.getElementById('nome').value,
+                descricao: document.getElementById('descricao').value,
+                preco: parseFloat(document.getElementById('preco').value),
+                quantidadeEstoque: parseInt(document.getElementById('estoque').value)
+            };
+            
+            const id = document.getElementById('produtoId').value;
+            const url = id ? `${API_URL}/${id}` : API_URL;
+            const method = id ? 'PUT' : 'POST';
+            
+            await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(produto)
+            });
+            
+            clearForm();
+            loadProdutos();
+        });
+        
+        async function editProduto(id) {
+            const response = await fetch(`${API_URL}/${id}`);
+            const produto = await response.json();
+            
+            document.getElementById('produtoId').value = produto.id;
+            document.getElementById('nome').value = produto.nome;
+            document.getElementById('descricao').value = produto.descricao;
+            document.getElementById('preco').value = produto.preco;
+            document.getElementById('estoque').value = produto.quantidadeEstoque;
+        }
+        
+        async function deleteProduto(id) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            loadProdutos();
+        }
+        
+        function clearForm() {
+            document.getElementById('produtoForm').reset();
+            document.getElementById('produtoId').value = '';
+        }
+        
+        // Carregar produtos ao iniciar
+        loadProdutos();
+    </script>
+</body>
+</html>
